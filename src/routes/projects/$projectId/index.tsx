@@ -40,7 +40,7 @@ function ProjectBoardPage() {
         setProject(p)
 
         // Fetch member display names
-        const memberUids = Object.keys(p.members)
+        const memberUids = Object.entries(p.members).filter(([, role]) => role != null).map(([uid]) => uid)
         const userProfiles = await Promise.all(
           memberUids.map((uid) => getUser(uid))
         )

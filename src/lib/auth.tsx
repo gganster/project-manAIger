@@ -7,7 +7,8 @@ import {
   onAuthStateChanged,
   type User,
 } from "firebase/auth"
-import { setUser, getUser } from "@/features/project/firestore"
+import { getUser } from "@/features/project/firestore"
+import { signUpUser } from "@/actions/user/serverSignUp"
 import type { AppUser } from "@/lib/types"
 
 interface AuthContextValue {
@@ -46,7 +47,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signUp(email: string, password: string, displayName: string) {
     const credential = await createUserWithEmailAndPassword(auth, email, password)
-    await setUser(credential.user.uid, { email, displayName, createdAt: new Date() })
+    const idToken = await credential.user.getIdToken()
+    await signUpUser({ data: { idToken, displayName } })
   }
 
   async function signOut() {

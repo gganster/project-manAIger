@@ -59,7 +59,7 @@ function ProjectsPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => {
             const role = user ? project.members[user.uid] : undefined
-            const memberCount = Object.keys(project.members).length
+            const memberCount = Object.values(project.members).filter((r) => r != null).length
             return (
               <button
                 key={project.id}

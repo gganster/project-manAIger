@@ -1,5 +1,7 @@
 import { useState } from "react"
-import { inviteMember } from "./firestore"
+import { useServerFn } from "@tanstack/react-start"
+import { auth } from "@/firebase"
+import { inviteMember } from "@/actions/invite/serverInvitation"
 import type { ProjectRole } from "@/lib/types"
 import {
   Dialog,
@@ -37,12 +39,17 @@ export function InviteMemberDialog({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const _inviteMember = useServerFn(inviteMember)
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setSubmitting(true)
     try {
-      await inviteMember(projectId, email.trim(), role)
+      const idToken = await auth.currentUser?.getIdToken()
+      if (!idToken) throw new Error("Non authentifié")
+
+      await _inviteMember({ data: { idToken, email: email.trim(), role, projectId } })
       onOpenChange(false)
       setEmail("")
       setRole("user")
@@ -84,7 +91,7 @@ export function InviteMemberDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="invite-role">Role</Label>
+            <Label htmlFor="invite-role">Rôle</Label>
             <Select value={role} onValueChange={(v) => setRole(v as ProjectRole)}>
               <SelectTrigger id="invite-role" className="w-full">
                 <SelectValue />
@@ -106,7 +113,7 @@ export function InviteMemberDialog({
               Annuler
             </Button>
             <Button type="submit" disabled={submitting || !email.trim()}>
-              {submitting ? "Invitation..." : "Inviter"}
+              {submitting ? "Envoi..." : "Envoyer l'invitation"}
             </Button>
           </DialogFooter>
         </form>

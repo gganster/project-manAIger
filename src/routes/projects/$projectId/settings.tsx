@@ -73,10 +73,12 @@ function ProjectSettingsPage() {
 
     // Load member user profiles
     const rows = await Promise.all(
-      Object.entries(p.members).map(async ([uid, role]) => {
-        const appUser = await getUser(uid)
-        return { uid, appUser, role }
-      })
+      Object.entries(p.members)
+        .filter(([, role]) => role != null)
+        .map(async ([uid, role]) => {
+          const appUser = await getUser(uid)
+          return { uid, appUser, role }
+        })
     )
     setMembers(rows)
   }

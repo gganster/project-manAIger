@@ -54,3 +54,10 @@ export interface AppUser {
   displayName: string
   createdAt: Date
 }
+
+export interface Invite {
+  uid: string
+  email: string
+  role: ProjectRole
+  createdAt: Date
+}

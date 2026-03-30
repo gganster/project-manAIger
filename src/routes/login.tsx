@@ -6,11 +6,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 
-export const Route = createFileRoute("/login")({ component: LoginPage })
+export const Route = createFileRoute("/login")({
+  validateSearch: (search): { redirect?: string } => ({
+    redirect: search.redirect as string | undefined,
+  }),
+  component: LoginPage,
+})
 
 function LoginPage() {
   const { user, loading, signIn } = useAuth()
   const navigate = useNavigate()
+  const { redirect } = Route.useSearch()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -18,9 +24,13 @@ function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      navigate({ to: "/projects" })
+      if (redirect) {
+        window.location.href = redirect
+      } else {
+        navigate({ to: "/projects" })
+      }
     }
-  }, [user, loading, navigate])
+  }, [user, loading, navigate, redirect])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -28,7 +38,11 @@ function LoginPage() {
     setSubmitting(true)
     try {
       await signIn(email, password)
-      navigate({ to: "/projects" })
+      if (redirect) {
+        window.location.href = redirect
+      } else {
+        navigate({ to: "/projects" })
+      }
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
       if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
@@ -82,7 +96,7 @@ function LoginPage() {
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Pas encore de compte ?{" "}
-            <Link to="/register" className="underline">
+            <Link to="/register" search={{ redirect }} className="underline">
               Créer un compte
             </Link>
           </p>

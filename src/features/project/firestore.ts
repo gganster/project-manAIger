@@ -1,15 +1,13 @@
 import {
   doc, collection, getDoc, getCollectionQuery,
   onCollection,
-  setDoc, addDoc, updateDoc, deleteDoc,
+  addDoc, updateDoc, deleteDoc,
   query, where, Timestamp,
 } from "@/firebase"
 import type { Project, AppUser } from "@/lib/types"
 
 // ---- Users ----
 export const getUser = (uid: string) => getDoc<AppUser>("users", uid)
-export const setUser = (uid: string, data: Omit<AppUser, "uid">) =>
-  setDoc(doc("users", uid), { ...data, createdAt: Timestamp.now() })
 
 // ---- Projects ----
 export const getProject = (projectId: string) => getDoc<Project>("projects", projectId)

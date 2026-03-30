@@ -6,11 +6,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 
-export const Route = createFileRoute("/register")({ component: RegisterPage })
+export const Route = createFileRoute("/register")({
+  validateSearch: (search): { redirect?: string } => ({
+    redirect: search.redirect as string | undefined,
+  }),
+  component: RegisterPage,
+})
 
 function RegisterPage() {
   const { user, loading, signUp } = useAuth()
   const navigate = useNavigate()
+  const { redirect } = Route.useSearch()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [displayName, setDisplayName] = useState("")
@@ -19,9 +25,13 @@ function RegisterPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      navigate({ to: "/projects" })
+      if (redirect) {
+        window.location.href = redirect
+      } else {
+        navigate({ to: "/projects" })
+      }
     }
-  }, [user, loading, navigate])
+  }, [user, loading, navigate, redirect])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -29,7 +39,11 @@ function RegisterPage() {
     setSubmitting(true)
     try {
       await signUp(email, password, displayName)
-      navigate({ to: "/projects" })
+      if (redirect) {
+        window.location.href = redirect
+      } else {
+        navigate({ to: "/projects" })
+      }
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
       if (code === "auth/email-already-in-use") {
@@ -96,7 +110,7 @@ function RegisterPage() {
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Déjà un compte ?{" "}
-            <Link to="/login" className="underline">
+            <Link to="/login" search={{ redirect }} className="underline">
               Se connecter
             </Link>
           </p>
