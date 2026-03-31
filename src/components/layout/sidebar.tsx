@@ -47,7 +47,7 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
         <div className="flex h-14 items-center justify-between px-4">
           <Link to="/projects" className="flex items-center gap-2 text-sm font-semibold text-slate-100 no-underline hover:text-white">
             <FolderKanban className="h-5 w-5 text-slate-400" />
-            <span>ProjectFlow</span>
+            <span>ProjectManAIger</span>
           </Link>
           <Button
             variant="ghost"

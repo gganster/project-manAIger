@@ -19,6 +19,7 @@ function RegisterPage() {
   const { redirect } = Route.useSearch()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [displayName, setDisplayName] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -36,6 +37,10 @@ function RegisterPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    if (password !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas.")
+      return
+    }
     setSubmitting(true)
     try {
       await signUp(email, password, displayName)
@@ -97,6 +102,17 @@ function RegisterPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 autoComplete="new-password"
               />

@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
@@ -22,9 +24,19 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcceptInviteRoute = AcceptInviteRouteImport.update({
@@ -57,7 +69,9 @@ const ProjectsProjectIdSettingsRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accept-invite': typeof AcceptInviteRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/projects/': typeof ProjectsIndexRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
@@ -66,7 +80,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accept-invite': typeof AcceptInviteRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/projects': typeof ProjectsIndexRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
@@ -76,7 +92,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/accept-invite': typeof AcceptInviteRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/projects/': typeof ProjectsIndexRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
@@ -87,7 +105,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/accept-invite'
+    | '/forgot-password'
     | '/login'
+    | '/profile'
     | '/register'
     | '/projects/'
     | '/projects/$projectId/settings'
@@ -96,7 +116,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/accept-invite'
+    | '/forgot-password'
     | '/login'
+    | '/profile'
     | '/register'
     | '/projects'
     | '/projects/$projectId/settings'
@@ -105,7 +127,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/accept-invite'
+    | '/forgot-password'
     | '/login'
+    | '/profile'
     | '/register'
     | '/projects/'
     | '/projects/$projectId/settings'
@@ -115,7 +139,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AcceptInviteRoute: typeof AcceptInviteRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
   ProjectsProjectIdSettingsRoute: typeof ProjectsProjectIdSettingsRoute
@@ -131,11 +157,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/accept-invite': {
@@ -179,7 +219,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AcceptInviteRoute: AcceptInviteRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
   ProjectsProjectIdSettingsRoute: ProjectsProjectIdSettingsRoute,

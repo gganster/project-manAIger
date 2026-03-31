@@ -61,7 +61,7 @@ export const inviteMember = createServerFn({ method: 'POST' })
     await sendEmail({
       to: email,
       subject: `Invitation à rejoindre ${project.name}`,
-      html: `<p>Vous avez été invité à rejoindre le projet <strong>${project.name}</strong> sur ProjectFlow.</p>
+      html: `<p>Vous avez été invité à rejoindre le projet <strong>${project.name}</strong> sur ProjectManAIger.</p>
       <a href="${process.env.API_DOMAIN}/accept-invite?token=${inviteToken}&projectId=${projectId}">Accepter l'invitation</a>`,
     })
 

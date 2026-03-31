@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react"
-import { useRouterState } from "@tanstack/react-router"
-import { LogOut, Menu } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useRouterState, useNavigate } from "@tanstack/react-router"
+import { LogOut, Menu, UserCog } from "lucide-react"
 import { useAuth } from "@/lib/auth"
 import { getUserProjects } from "@/features/project/firestore"
 import type { Project } from "@/lib/types"
@@ -31,6 +31,7 @@ function getInitials(name: string): string {
 export function AppHeader({ onMenuToggle }: HeaderProps) {
   const { user, appUser, signOut } = useAuth()
   const [projects, setProjects] = useState<Project[]>([])
+  const navigate = useNavigate()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   useEffect(() => {
@@ -68,6 +69,10 @@ export function AppHeader({ onMenuToggle }: HeaderProps) {
 
     if (projectsMatch) {
       return <span className="text-sm font-medium text-foreground">Projets</span>
+    }
+
+    if (pathname === "/profile") {
+      return <span className="text-sm font-medium text-foreground">Mon profil</span>
     }
 
     return null
@@ -115,6 +120,14 @@ export function AppHeader({ onMenuToggle }: HeaderProps) {
                 <DropdownMenuSeparator />
               </>
             )}
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onClick={() => navigate({ to: "/profile" })}
+            >
+              <UserCog className="mr-2 h-4 w-4" />
+              Mon profil
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               className="cursor-pointer text-destructive focus:text-destructive"
               onClick={() => signOut()}
