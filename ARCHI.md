@@ -7,7 +7,7 @@
 **Tech Stack Summary**:
 - Framework: TanStack Start (SPA mode, no SSR)
 - Deployment: Firebase Hosting
-- Database: Firestore
+- Database: Firestore.
 - Authentication: Firebase Auth
 - MCP Server: TypeScript, Firebase Admin SDK
 - UI: shadcn/ui + Tailwind CSS + dnd-kit
