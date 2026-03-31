@@ -64,9 +64,9 @@ export function EditCardDialog({
         description: description.trim(),
         priority,
         status,
-        assigneeId: assigneeId || undefined,
-        deadline: deadline ? new Date(deadline) : undefined,
-        gitBranch: gitBranch.trim() || undefined,
+        assigneeId: assigneeId || null,
+        deadline: deadline ? new Date(deadline) : null,
+        gitBranch: gitBranch.trim() || null,
       }
       await updateCard(projectId, card.id, updates)
       onClose()
