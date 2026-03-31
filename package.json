@@ -9,9 +9,11 @@
     "dev": "vite dev --port 3000",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dev:tunnel": "concurrently \"vite dev --port 3000\" \"npx ngrok http 3000\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -48,6 +50,7 @@
     "@types/react-dom": "^19.2.0",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^5.1.4",
+    "concurrently": "^9.2.1",
     "jsdom": "^28.1.0",
     "typescript": "^5.7.2",
     "vite": "^7.3.1",
@@ -56,8 +59,11 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "@firebase/util",
       "esbuild",
-      "lightningcss"
+      "lightningcss",
+      "msw",
+      "protobufjs"
     ]
   }
 }
