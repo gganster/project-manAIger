@@ -72,7 +72,7 @@ export async function createRepoWebhook(
     body: JSON.stringify({
       name: "web",
       active: true,
-      events: ["create", "pull_request"],
+      events: ["create", "push"],
       config: { url: webhookUrl, content_type: "json", secret, insecure_ssl: "0" },
     }),
   })
