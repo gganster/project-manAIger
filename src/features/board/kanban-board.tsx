@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   DndContext,
   DragOverlay,
@@ -8,7 +8,6 @@ import {
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
-  type DragOverEvent,
 } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { KanbanColumn } from "./kanban-column"
@@ -27,10 +26,32 @@ interface KanbanBoardProps {
 export function KanbanBoard({ cards, projectId, userId, members }: KanbanBoardProps) {
   const [activeCard, setActiveCard] = useState<Card | null>(null)
   const [localCards, setLocalCards] = useState<Card[]>(cards)
+  const pendingUpdates = useRef<Map<string, Partial<Card>>>(new Map())
 
-  // Sync external cards into local state when parent updates
-  // We use localCards for optimistic rendering during drag
-  const displayCards = activeCard ? localCards : cards
+  // Sync from Firestore, merge with pending optimistic changes
+  useEffect(() => {
+    if (pendingUpdates.current.size === 0) {
+      setLocalCards(cards)
+      return
+    }
+
+    const nextPending = new Map(pendingUpdates.current)
+    const merged = cards.map((card) => {
+      const pending = nextPending.get(card.id)
+      if (!pending) return card
+
+      const caught = Object.entries(pending).every(
+        ([key, value]) => (card as Record<string, unknown>)[key] === value
+      )
+      if (caught) {
+        nextPending.delete(card.id)
+        return card
+      }
+      return { ...card, ...pending }
+    })
+    pendingUpdates.current = nextPending
+    setLocalCards(merged)
+  }, [cards])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -38,60 +59,23 @@ export function KanbanBoard({ cards, projectId, userId, members }: KanbanBoardPr
     })
   )
 
-  function getCardById(id: string): Card | undefined {
-    return cards.find((c) => c.id === id)
-  }
-
   function getCardsForStatus(status: CardStatus, cardList: Card[]): Card[] {
     return cardList.filter((c) => c.status === status).sort((a, b) => a.order - b.order)
   }
 
-  function handleDragStart(event: DragStartEvent) {
-    const card = getCardById(event.active.id as string)
-    if (card) {
-      setActiveCard(card)
-      setLocalCards([...cards])
-    }
+  function applyOptimistic(cardId: string, changes: Partial<Card>) {
+    pendingUpdates.current.set(cardId, {
+      ...pendingUpdates.current.get(cardId),
+      ...changes,
+    })
+    setLocalCards((prev) =>
+      prev.map((c) => (c.id === cardId ? { ...c, ...changes } : c))
+    )
   }
 
-  function handleDragOver(event: DragOverEvent) {
-    const { active, over } = event
-    if (!over) return
-
-    const activeId = active.id as string
-    const overId = over.id as string
-
-    if (activeId === overId) return
-
-    const activeCard = localCards.find((c) => c.id === activeId)
-    if (!activeCard) return
-
-    // Check if dropping over a column (the droppable id is the status)
-    const isOverColumn = CARD_STATUS_ORDER.includes(overId as CardStatus)
-
-    if (isOverColumn) {
-      const newStatus = overId as CardStatus
-      if (activeCard.status !== newStatus) {
-        setLocalCards((prev) =>
-          prev.map((c) =>
-            c.id === activeId ? { ...c, status: newStatus } : c
-          )
-        )
-      }
-      return
-    }
-
-    // Over another card
-    const overCard = localCards.find((c) => c.id === overId)
-    if (!overCard) return
-
-    if (activeCard.status !== overCard.status) {
-      setLocalCards((prev) =>
-        prev.map((c) =>
-          c.id === activeId ? { ...c, status: overCard.status } : c
-        )
-      )
-    }
+  function handleDragStart(event: DragStartEvent) {
+    const card = localCards.find((c) => c.id === (event.active.id as string))
+    if (card) setActiveCard(card)
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -102,29 +86,28 @@ export function KanbanBoard({ cards, projectId, userId, members }: KanbanBoardPr
 
     const activeId = active.id as string
     const overId = over.id as string
+    if (activeId === overId) return
 
-    const sourceCard = cards.find((c) => c.id === activeId)
+    const sourceCard = localCards.find((c) => c.id === activeId)
     if (!sourceCard) return
 
+    // Resolve target status: column id = status, card id = look up the card's status
     const isOverColumn = CARD_STATUS_ORDER.includes(overId as CardStatus)
     const targetStatus: CardStatus = isOverColumn
       ? (overId as CardStatus)
-      : (cards.find((c) => c.id === overId)?.status ?? sourceCard.status)
-
-    const targetColumnCards = getCardsForStatus(targetStatus, cards)
+      : (localCards.find((c) => c.id === overId)?.status ?? sourceCard.status)
 
     if (sourceCard.status === targetStatus) {
       // Reorder within same column
-      if (isOverColumn || activeId === overId) return
+      if (isOverColumn) return
 
-      const oldIndex = targetColumnCards.findIndex((c) => c.id === activeId)
-      const newIndex = targetColumnCards.findIndex((c) => c.id === overId)
+      const columnCards = getCardsForStatus(targetStatus, localCards)
+      const oldIndex = columnCards.findIndex((c) => c.id === activeId)
+      const newIndex = columnCards.findIndex((c) => c.id === overId)
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return
 
-      if (oldIndex === newIndex) return
+      const reordered = arrayMove(columnCards, oldIndex, newIndex)
 
-      const reordered = arrayMove(targetColumnCards, oldIndex, newIndex)
-
-      // Calculate new order: use midpoint between neighbors or timestamp
       const prev = reordered[newIndex - 1]
       const next = reordered[newIndex + 1]
 
@@ -139,14 +122,17 @@ export function KanbanBoard({ cards, projectId, userId, members }: KanbanBoardPr
         newOrder = Date.now()
       }
 
+      applyOptimistic(activeId, { order: newOrder })
       updateCard(projectId, activeId, { order: newOrder })
     } else {
       // Move to different column
+      const targetColumnCards = getCardsForStatus(targetStatus, localCards)
       const newOrder =
         targetColumnCards.length > 0
           ? targetColumnCards[targetColumnCards.length - 1].order + 1000
           : Date.now()
 
+      applyOptimistic(activeId, { status: targetStatus, order: newOrder })
       moveCard(projectId, activeId, targetStatus, newOrder)
     }
   }
@@ -156,7 +142,6 @@ export function KanbanBoard({ cards, projectId, userId, members }: KanbanBoardPr
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-4 overflow-x-auto pb-4">
@@ -164,7 +149,7 @@ export function KanbanBoard({ cards, projectId, userId, members }: KanbanBoardPr
           <KanbanColumn
             key={status}
             status={status}
-            cards={displayCards.filter((c) => c.status === status)}
+            cards={localCards.filter((c) => c.status === status)}
             projectId={projectId}
             userId={userId}
             members={members}
