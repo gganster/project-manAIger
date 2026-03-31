@@ -18,6 +18,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$projectId/index'
 import { Route as ProjectsProjectIdSettingsRouteImport } from './routes/projects/$projectId/settings'
+import { Route as ApiGithubWebhookRouteImport } from './routes/api/github/webhook'
+import { Route as ApiGithubCallbackRouteImport } from './routes/api/github/callback'
+import { Route as ApiGithubAuthRouteImport } from './routes/api/github/auth'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -65,6 +68,21 @@ const ProjectsProjectIdSettingsRoute =
     path: '/projects/$projectId/settings',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiGithubWebhookRoute = ApiGithubWebhookRouteImport.update({
+  id: '/api/github/webhook',
+  path: '/api/github/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGithubCallbackRoute = ApiGithubCallbackRouteImport.update({
+  id: '/api/github/callback',
+  path: '/api/github/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGithubAuthRoute = ApiGithubAuthRouteImport.update({
+  id: '/api/github/auth',
+  path: '/api/github/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -74,6 +92,9 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/api/github/auth': typeof ApiGithubAuthRoute
+  '/api/github/callback': typeof ApiGithubCallbackRoute
+  '/api/github/webhook': typeof ApiGithubWebhookRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
 }
@@ -85,6 +106,9 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/projects': typeof ProjectsIndexRoute
+  '/api/github/auth': typeof ApiGithubAuthRoute
+  '/api/github/callback': typeof ApiGithubCallbackRoute
+  '/api/github/webhook': typeof ApiGithubWebhookRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId': typeof ProjectsProjectIdIndexRoute
 }
@@ -97,6 +121,9 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/api/github/auth': typeof ApiGithubAuthRoute
+  '/api/github/callback': typeof ApiGithubCallbackRoute
+  '/api/github/webhook': typeof ApiGithubWebhookRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
 }
@@ -110,6 +137,9 @@ export interface FileRouteTypes {
     | '/profile'
     | '/register'
     | '/projects/'
+    | '/api/github/auth'
+    | '/api/github/callback'
+    | '/api/github/webhook'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/'
   fileRoutesByTo: FileRoutesByTo
@@ -121,6 +151,9 @@ export interface FileRouteTypes {
     | '/profile'
     | '/register'
     | '/projects'
+    | '/api/github/auth'
+    | '/api/github/callback'
+    | '/api/github/webhook'
     | '/projects/$projectId/settings'
     | '/projects/$projectId'
   id:
@@ -132,6 +165,9 @@ export interface FileRouteTypes {
     | '/profile'
     | '/register'
     | '/projects/'
+    | '/api/github/auth'
+    | '/api/github/callback'
+    | '/api/github/webhook'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/'
   fileRoutesById: FileRoutesById
@@ -144,6 +180,9 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
+  ApiGithubAuthRoute: typeof ApiGithubAuthRoute
+  ApiGithubCallbackRoute: typeof ApiGithubCallbackRoute
+  ApiGithubWebhookRoute: typeof ApiGithubWebhookRoute
   ProjectsProjectIdSettingsRoute: typeof ProjectsProjectIdSettingsRoute
   ProjectsProjectIdIndexRoute: typeof ProjectsProjectIdIndexRoute
 }
@@ -213,6 +252,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/github/webhook': {
+      id: '/api/github/webhook'
+      path: '/api/github/webhook'
+      fullPath: '/api/github/webhook'
+      preLoaderRoute: typeof ApiGithubWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/github/callback': {
+      id: '/api/github/callback'
+      path: '/api/github/callback'
+      fullPath: '/api/github/callback'
+      preLoaderRoute: typeof ApiGithubCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/github/auth': {
+      id: '/api/github/auth'
+      path: '/api/github/auth'
+      fullPath: '/api/github/auth'
+      preLoaderRoute: typeof ApiGithubAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -224,6 +284,9 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
+  ApiGithubAuthRoute: ApiGithubAuthRoute,
+  ApiGithubCallbackRoute: ApiGithubCallbackRoute,
+  ApiGithubWebhookRoute: ApiGithubWebhookRoute,
   ProjectsProjectIdSettingsRoute: ProjectsProjectIdSettingsRoute,
   ProjectsProjectIdIndexRoute: ProjectsProjectIdIndexRoute,
 }

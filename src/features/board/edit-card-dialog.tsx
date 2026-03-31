@@ -48,6 +48,7 @@ export function EditCardDialog({
   const [deadline, setDeadline] = useState<string>(
     card.deadline ? card.deadline.toISOString().split("T")[0] : ""
   )
+  const [gitBranch, setGitBranch] = useState<string>(card.gitBranch ?? "")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -65,6 +66,7 @@ export function EditCardDialog({
         status,
         assigneeId: assigneeId || undefined,
         deadline: deadline ? new Date(deadline) : undefined,
+        gitBranch: gitBranch.trim() || undefined,
       }
       await updateCard(projectId, card.id, updates)
       onClose()
@@ -183,6 +185,15 @@ export function EditCardDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="edit-git-branch">Branche Git</Label>
+            <Input
+              id="edit-git-branch"
+              value={gitBranch}
+              onChange={(e) => setGitBranch(e.target.value)}
+              placeholder="feature/PM-1-ma-feature"
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="edit-deadline">Échéance</Label>

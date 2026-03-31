@@ -42,10 +42,24 @@ export interface Project {
   members: Record<string, ProjectRole>
   cardCounter: number
   settings: {
-    github?: { repo: string; owner: string }
+    github?: {
+      repo: string
+      owner: string
+      webhookId?: number
+      webhookActive?: boolean
+      connectedBy?: string
+      connectedAt?: Date
+    }
   }
   createdAt: Date
   updatedAt: Date
+}
+
+export interface GitHubConnection {
+  id: number
+  login: string
+  accessToken: string
+  connectedAt: Date
 }
 
 export interface AppUser {
@@ -53,6 +67,7 @@ export interface AppUser {
   email: string
   displayName: string
   createdAt: Date
+  github?: GitHubConnection
 }
 
 export interface Invite {

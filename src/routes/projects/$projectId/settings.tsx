@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth"
 import { getProject, updateProject, deleteProject, removeMember, getUser } from "@/features/project/firestore"
-import type { Project, AppUser, ProjectRole } from "@/lib/types"
+import type { Project, AppUser, ProjectRole, GitHubConnection } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,9 +23,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { InviteMemberDialog } from "@/features/project/invite-member-dialog"
-import { PlusIcon } from "lucide-react"
+import { PlusIcon, GitBranch } from "lucide-react"
+import { listRepos } from "@/actions/github/serverListRepos"
+import { linkRepo } from "@/actions/github/serverLinkRepo"
+import { unlinkRepo } from "@/actions/github/serverUnlinkRepo"
+import type { GitHubRepo } from "@/lib/github"
 
 export const Route = createFileRoute("/projects/$projectId/settings")({
+  validateSearch: (search): { github?: string } => ({
+    github: search.github as string | undefined,
+  }),
   component: ProjectSettingsPage,
 })
 
@@ -44,11 +51,13 @@ function ProjectSettingsPage() {
   const [fetching, setFetching] = useState(true)
   const [members, setMembers] = useState<MemberRow[]>([])
 
-  // GitHub settings state
-  const [githubOwner, setGithubOwner] = useState("")
-  const [githubRepo, setGithubRepo] = useState("")
-  const [githubSaving, setGithubSaving] = useState(false)
-  const [githubSaved, setGithubSaved] = useState(false)
+  // GitHub state
+  const [githubConnection, setGithubConnection] = useState<GitHubConnection | null>(null)
+  const [repos, setRepos] = useState<GitHubRepo[]>([])
+  const [selectedRepo, setSelectedRepo] = useState("")
+  const [reposLoading, setReposLoading] = useState(false)
+  const [githubLinking, setGithubLinking] = useState(false)
+  const [githubUnlinking, setGithubUnlinking] = useState(false)
 
   // Invite dialog
   const [inviteOpen, setInviteOpen] = useState(false)
@@ -68,8 +77,12 @@ function ProjectSettingsPage() {
       return
     }
     setProject(p)
-    setGithubOwner(p.settings.github?.owner ?? "")
-    setGithubRepo(p.settings.github?.repo ?? "")
+
+    // Load current user's GitHub connection
+    if (user) {
+      const currentUserProfile = await getUser(user.uid)
+      setGithubConnection(currentUserProfile?.github ?? null)
+    }
 
     // Load member user profiles
     const rows = await Promise.all(
@@ -126,18 +139,52 @@ function ProjectSettingsPage() {
     }
   }
 
-  async function handleSaveGithub(e: React.FormEvent) {
-    e.preventDefault()
-    if (!project) return
-    setGithubSaving(true)
+  async function handleLoadRepos() {
+    if (!user) return
+    setReposLoading(true)
     try {
-      await updateProject(project.id, {
-        settings: { ...project.settings, github: { owner: githubOwner.trim(), repo: githubRepo.trim() } },
-      })
-      setGithubSaved(true)
-      setTimeout(() => setGithubSaved(false), 2000)
+      const idToken = await user.getIdToken()
+      const result = await listRepos({ data: { idToken } })
+      setRepos(result.repos)
+    } catch {
+      setRepos([])
     } finally {
-      setGithubSaving(false)
+      setReposLoading(false)
+    }
+  }
+
+  async function handleLinkRepo() {
+    if (!user || !project || !selectedRepo) return
+    setGithubLinking(true)
+    try {
+      const [owner, repo] = selectedRepo.split("/")
+      const idToken = await user.getIdToken()
+      await linkRepo({
+        data: {
+          idToken,
+          projectId: project.id,
+          owner,
+          repo,
+          webhookBaseUrl: window.location.origin,
+        },
+      })
+      await loadProject()
+      setSelectedRepo("")
+      setRepos([])
+    } finally {
+      setGithubLinking(false)
+    }
+  }
+
+  async function handleUnlinkRepo() {
+    if (!user || !project) return
+    setGithubUnlinking(true)
+    try {
+      const idToken = await user.getIdToken()
+      await unlinkRepo({ data: { idToken, projectId: project.id } })
+      await loadProject()
+    } finally {
+      setGithubUnlinking(false)
     }
   }
 
@@ -229,33 +276,72 @@ function ProjectSettingsPage() {
       {/* GitHub section */}
       <section className="mb-8">
         <h2 className="mb-4 text-lg font-semibold">GitHub</h2>
-        <form onSubmit={handleSaveGithub} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="github-owner">Propriétaire</Label>
-            <Input
-              id="github-owner"
-              value={githubOwner}
-              onChange={(e) => setGithubOwner(e.target.value)}
-              placeholder="nom-utilisateur"
-              disabled={!isAdmin}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="github-repo">Nom du dépôt</Label>
-            <Input
-              id="github-repo"
-              value={githubRepo}
-              onChange={(e) => setGithubRepo(e.target.value)}
-              placeholder="mon-depot"
-              disabled={!isAdmin}
-            />
-          </div>
-          {isAdmin && (
-            <Button type="submit" disabled={githubSaving}>
-              {githubSaved ? "Sauvegardé" : githubSaving ? "Sauvegarde..." : "Sauvegarder"}
-            </Button>
+        <div className="rounded-xl border p-4 space-y-4">
+          {project.settings.github?.webhookActive ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <GitBranch className="h-5 w-5 text-green-600" />
+                <span className="text-sm font-medium">
+                  {project.settings.github.owner}/{project.settings.github.repo}
+                </span>
+                <Badge variant="secondary" className="ml-auto">Connecté</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Les branches et merges sur ce repo mettent à jour automatiquement le board.
+              </p>
+              {isAdmin && (
+                <Button variant="outline" size="sm" onClick={handleUnlinkRepo} disabled={githubUnlinking}>
+                  {githubUnlinking ? "Déconnexion..." : "Délier le repository"}
+                </Button>
+              )}
+            </div>
+          ) : !githubConnection ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Connectez votre compte GitHub pour lier un repository à ce projet.
+              </p>
+              {isAdmin && (
+                <Button
+                  onClick={() => {
+                    window.location.href = `/api/github/auth?uid=${user.uid}&projectId=${projectId}`
+                  }}
+                >
+                  <GitBranch className="mr-2 h-4 w-4" />
+                  Connecter GitHub
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Connecté en tant que <strong>{githubConnection.login}</strong>. Sélectionnez un repository à lier.
+              </p>
+              {repos.length === 0 ? (
+                <Button onClick={handleLoadRepos} disabled={reposLoading} variant="outline">
+                  {reposLoading ? "Chargement..." : "Charger mes repositories"}
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Select value={selectedRepo} onValueChange={setSelectedRepo}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Sélectionner un repository" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {repos.map((r) => (
+                        <SelectItem key={r.fullName} value={r.fullName}>
+                          {r.fullName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={handleLinkRepo} disabled={githubLinking || !selectedRepo}>
+                    {githubLinking ? "Liaison..." : "Lier"}
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
-        </form>
+        </div>
       </section>
 
       {isAdmin && (

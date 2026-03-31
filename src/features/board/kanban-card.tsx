@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { GitBranch } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { EditCardDialog } from "./edit-card-dialog"
@@ -96,6 +97,12 @@ export function KanbanCard({ card, projectId, members, overlay = false }: Kanban
           <div className="px-3">
             <p className="text-sm font-medium leading-snug line-clamp-2">{card.title}</p>
           </div>
+          {card.gitBranch && (
+            <div className="flex items-center gap-1 px-3">
+              <GitBranch className="h-3 w-3 shrink-0 text-muted-foreground" />
+              <span className="truncate text-xs text-muted-foreground">{card.gitBranch}</span>
+            </div>
+          )}
           {(assigneeName || deadlineStr) && (
             <div className="flex items-center justify-between gap-2 px-3">
               {deadlineStr && (
