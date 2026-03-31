@@ -17,11 +17,12 @@ export const Route = createFileRoute("/api/github/webhook")({
         }
 
         const payload = JSON.parse(body)
+        console.log("[webhook]", event, event === "push" ? payload.ref : "")
 
         if (event === "create" && payload.ref_type === "branch") {
           await handleBranchCreated(payload)
-        } else if (event === "pull_request" && payload.action === "closed" && payload.pull_request?.merged) {
-          await handlePRMerged(payload)
+        } else if (event === "push") {
+          await handlePush(payload)
         }
 
         return Response.json({ ok: true })
@@ -109,12 +110,30 @@ async function handleBranchCreated(payload: { ref: string; repository: { owner: 
   }
 }
 
-async function handlePRMerged(payload: {
-  pull_request: { head: { ref: string }; base: { ref: string } }
+function extractMergedBranch(commits: { message: string }[]): string | null {
+  for (const commit of commits) {
+    const match = commit.message.match(/^Merge branch '([^']+)'/)
+      || commit.message.match(/^Merge branch "([^"]+)"/)
+    if (match) return match[1]
+  }
+  return null
+}
+
+async function handlePush(payload: {
+  ref: string
+  commits?: { message: string }[]
   repository: { owner: { login: string }; name: string }
 }) {
-  const headRef = payload.pull_request.head.ref
-  const baseRef = payload.pull_request.base.ref
+  const targetBranch = payload.ref.replace("refs/heads/", "")
+  const commits = payload.commits || []
+
+  if (targetBranch !== "dev" && targetBranch !== "main") return
+
+  const mergedBranch = extractMergedBranch(commits)
+  if (!mergedBranch) return
+
+  console.log("[webhook] Merge detected:", mergedBranch, "→", targetBranch)
+
   const owner = payload.repository.owner.login
   const repo = payload.repository.name
 
@@ -125,22 +144,28 @@ async function handlePRMerged(payload: {
   const db = admin.firestore()
   const cardsRef = db.collection("projects").doc(project.id).collection("cards")
 
-  if (baseRef === "dev") {
-    const snapshot = await cardsRef.where("gitBranch", "==", headRef).limit(1).get()
+  if (targetBranch === "dev") {
+    if (mergedBranch === "main") return
+    const snapshot = await cardsRef.where("gitBranch", "==", mergedBranch).limit(1).get()
     for (const doc of snapshot.docs) {
+      console.log("[webhook] Card", doc.data().ref, "→ testing")
       await doc.ref.update({ status: "testing", updatedAt: new Date() })
     }
-  } else if (baseRef === "main" && headRef !== "dev") {
-    const snapshot = await cardsRef.where("gitBranch", "==", headRef).limit(1).get()
-    for (const doc of snapshot.docs) {
-      await doc.ref.update({ status: "done", updatedAt: new Date() })
+  } else if (targetBranch === "main") {
+    if (mergedBranch === "dev") {
+      const snapshot = await cardsRef.where("status", "==", "testing").get()
+      const batch = db.batch()
+      for (const doc of snapshot.docs) {
+        console.log("[webhook] Card", doc.data().ref, "→ done (dev→main)")
+        batch.update(doc.ref, { status: "done", updatedAt: new Date() })
+      }
+      await batch.commit()
+    } else {
+      const snapshot = await cardsRef.where("gitBranch", "==", mergedBranch).limit(1).get()
+      for (const doc of snapshot.docs) {
+        console.log("[webhook] Card", doc.data().ref, "→ done")
+        await doc.ref.update({ status: "done", updatedAt: new Date() })
+      }
     }
-  } else if (baseRef === "main" && headRef === "dev") {
-    const snapshot = await cardsRef.where("status", "==", "testing").get()
-    const batch = db.batch()
-    for (const doc of snapshot.docs) {
-      batch.update(doc.ref, { status: "done", updatedAt: new Date() })
-    }
-    await batch.commit()
   }
 }
