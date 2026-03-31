@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { verifyWebhookSignature } from "@/lib/github"
+import { verifyWebhookSignature, getCommitParents, getBranchesForCommit } from "@/lib/github"
 import { matchBranchToCard } from "@/lib/claude"
 import getAdmin from "@/firebase-admin"
 import type { Card } from "@/lib/types"
@@ -112,8 +112,11 @@ async function handleBranchCreated(payload: { ref: string; repository: { owner: 
 
 function extractMergedBranch(commits: { message: string }[]): string | null {
   for (const commit of commits) {
-    const match = commit.message.match(/^Merge branch '([^']+)'/)
-      || commit.message.match(/^Merge branch "([^"]+)"/)
+    const m = commit.message
+    const match = m.match(/^Merge branch '([^']+)'/)
+      || m.match(/^Merge branch "([^"]+)"/)
+      || m.match(/^Merge remote-tracking branch '(?:origin\/)?([^']+)'/)
+      || m.match(/^Merge pull request .+ from (?:[^/]+\/)?(.+)/)
     if (match) return match[1]
   }
   return null
