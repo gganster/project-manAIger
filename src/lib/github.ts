@@ -98,6 +98,34 @@ export async function deleteRepoWebhook(
   if (!res.ok && res.status !== 404) throw new Error("Failed to delete webhook")
 }
 
+export async function getCommitParents(
+  token: string,
+  owner: string,
+  repo: string,
+  sha: string
+): Promise<string[]> {
+  const res = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/git/commits/${sha}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" },
+  })
+  if (!res.ok) return []
+  const data = await res.json()
+  return (data.parents || []).map((p: { sha: string }) => p.sha)
+}
+
+export async function getBranchesForCommit(
+  token: string,
+  owner: string,
+  repo: string,
+  sha: string
+): Promise<string[]> {
+  const res = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/commits/${sha}/branches-heads`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" },
+  })
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.map((b: { name: string }) => b.name)
+}
+
 export function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
   const expected = "sha256=" + crypto.createHmac("sha256", secret).update(payload).digest("hex")
   if (expected.length !== signature.length) return false
