@@ -110,21 +110,47 @@ async function handleBranchCreated(payload: { ref: string; repository: { owner: 
   }
 }
 
-function extractMergedBranch(commits: { message: string }[]): string | null {
+function extractMergedBranchFromMessage(commits: { id: string; message: string }[]): { branch: string | null; mergeCommitSha: string | null } {
   for (const commit of commits) {
     const m = commit.message
     const match = m.match(/^Merge branch '([^']+)'/)
       || m.match(/^Merge branch "([^"]+)"/)
       || m.match(/^Merge remote-tracking branch '(?:origin\/)?([^']+)'/)
       || m.match(/^Merge pull request .+ from (?:[^/]+\/)?(.+)/)
-    if (match) return match[1]
+    if (match) return { branch: match[1], mergeCommitSha: commit.id }
+
+    if (m.match(/^Merge commit '?[0-9a-f]+'?/)) {
+      return { branch: null, mergeCommitSha: commit.id }
+    }
   }
-  return null
+  return { branch: null, mergeCommitSha: null }
+}
+
+async function resolvemergedBranch(
+  token: string,
+  owner: string,
+  repo: string,
+  mergeCommitSha: string,
+  targetBranch: string
+): Promise<string | null> {
+  const parents = await getCommitParents(token, owner, repo, mergeCommitSha)
+  if (parents.length < 2) return null
+
+  const branches = await getBranchesForCommit(token, owner, repo, parents[1])
+  const filtered = branches.filter((b) => b !== targetBranch && b !== "main" && b !== "dev")
+  return filtered[0] || null
+}
+
+async function getGitHubTokenForProject(project: any): Promise<string | null> {
+  if (!project.settings?.github?.connectedBy) return null
+  const admin = getAdmin()
+  const userDoc = await admin.firestore().collection("users").doc(project.settings.github.connectedBy).get()
+  return userDoc.data()?.github?.accessToken || null
 }
 
 async function handlePush(payload: {
   ref: string
-  commits?: { message: string }[]
+  commits?: { id: string; message: string }[]
   repository: { owner: { login: string }; name: string }
 }) {
   const targetBranch = payload.ref.replace("refs/heads/", "")
@@ -132,16 +158,30 @@ async function handlePush(payload: {
 
   if (targetBranch !== "dev" && targetBranch !== "main") return
 
-  const mergedBranch = extractMergedBranch(commits)
-  if (!mergedBranch) return
-
-  console.log("[webhook] Merge detected:", mergedBranch, "→", targetBranch)
+  const { branch, mergeCommitSha } = extractMergedBranchFromMessage(commits)
+  if (!mergeCommitSha) return
 
   const owner = payload.repository.owner.login
   const repo = payload.repository.name
 
   const project = await findProjectByRepo(owner, repo)
   if (!project) return
+
+  let mergedBranch = branch
+  if (!mergedBranch && mergeCommitSha) {
+    const token = await getGitHubTokenForProject(project)
+    if (token) {
+      mergedBranch = await resolvemergedBranch(token, owner, repo, mergeCommitSha, targetBranch)
+      console.log("[webhook] Resolved merge commit to branch:", mergedBranch)
+    }
+  }
+
+  if (!mergedBranch) {
+    console.log("[webhook] Could not resolve merged branch from commit", mergeCommitSha)
+    return
+  }
+
+  console.log("[webhook] Merge detected:", mergedBranch, "→", targetBranch)
 
   const admin = getAdmin()
   const db = admin.firestore()
